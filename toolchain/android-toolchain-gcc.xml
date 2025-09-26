@@ -22,7 +22,7 @@
   <set name="PLATFORM_ARCH" value="arch-x86" />
   <set name="TOOLCHAIN" value="x86-${TOOLCHAIN_VERSION}" />
   <set name="EXEPREFIX" value="i686-linux-android" />
-  <set name="PLATFORM" value="android-21" unless="PLATFORM" />
+  <set name="PLATFORM" value="android-14" unless="PLATFORM" />
 </section>
 
 <section unless="HXCPP_X86">
@@ -32,7 +32,7 @@
   <set name="PLATFORM_ARCH" value="arch-arm" />
   <set name="TOOLCHAIN" value="arm-linux-androideabi-${TOOLCHAIN_VERSION}" />
   <set name="EXEPREFIX" value="arm-linux-androideabi" />
-  <set name="PLATFORM" value="android-21" unless="PLATFORM" />
+  <set name="PLATFORM" value="android-5" unless="PLATFORM" />
 </section>
 
 <section if="HXCPP_ARM64">
@@ -41,7 +41,7 @@
   <set name="PLATFORM_ARCH" value="arch-arm64" />
   <set name="TOOLCHAIN" value="aarch64-linux-android-${TOOLCHAIN_VERSION}" />
   <set name="EXEPREFIX" value="aarch64-linux-android" />
-  <set name="PLATFORM" value="android-21" unless="PLATFORM" />
+  <set name="PLATFORM" value="android-19" unless="PLATFORM" />
 </section>
 
 <section if="HXCPP_X86_64">
@@ -178,7 +178,10 @@
   </section>
   <flag value="-Wl,--no-undefined" unless="dll_import" />
   <flag value="-Wl,--unresolved-symbols=ignore-in-object-files" if="dll_import" />
-  <flag value="-Wl,-z,max-page-size=16384" />
+  <section unless="HXCPP_ANDROID_NO_16K_PAGES">
+	<flag value="-Wl,-z,max-page-size=16384" />
+	<flag value="-Wl,-z,common-page-size=16384" />
+  </section>
   <flag value="-Wl,-z,noexecstack"/>
   <flag value="--sysroot=${ANDROID_NDK_ROOT}/platforms/${PLATFORM}/${PLATFORM_ARCH}"/>
   <flag value="-L${ANDROID_NDK_ROOT}/platforms/${PLATFORM}/${PLATFORM_ARCH}/usr/lib"/>
@@ -218,7 +221,10 @@
   <flag value="-std=c++11" if="HXCPP_CPP11"/>
   <flag value="-Wl,--no-undefined" unless="dll_import" />
   <flag value="-Wl,--unresolved-symbols=ignore-in-object-files" if="dll_import" />
-  <flag value="-Wl,-z,max-page-size=16384" />
+  <section unless="HXCPP_ANDROID_NO_16K_PAGES">
+	<flag value="-Wl,-z,max-page-size=16384" />
+	<flag value="-Wl,-z,common-page-size=16384" />
+  </section>
   <flag value="-Wl,-z,noexecstack"/>
   <flag value="--sysroot=${ANDROID_NDK_ROOT}/platforms/${PLATFORM}/${PLATFORM_ARCH}"/>
   <flag value="-L${ANDROID_NDK_ROOT}/platforms/${PLATFORM}/${PLATFORM_ARCH}/usr/lib"/>

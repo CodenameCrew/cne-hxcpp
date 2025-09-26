@@ -47,7 +47,6 @@
   <include name="toolchain/common-defines.xml" />
   <flag value="-I${HXCPP}/include"/>
   <flag value="-Iinclude"/>
-  <flag value="--sysroot=${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/${ANDROID_HOST}/sysroot" />
   <objdir value="obj/android${OBJEXT}${ARCH}" />
   <ext value=".obj"/>
 
@@ -90,12 +89,17 @@
   <!-- Build time error, not run time -->
   <flag value="-Wl,--no-undefined" unless="HXCPP_ALLOW_UNDEFINED" />
 
-  <!-- Support 16KB page sizes -->
-  <flag value="-Wl,-z,max-page-size=16384" />
+  <!-- Disable 16KB page alignment workaround when explicitly requested -->
+  <section unless="HXCPP_ANDROID_NO_16K_PAGES">
+    <!-- Enable 16KB page size for NDK r27 and below -->
+    <flag value="-Wl,-z,max-page-size=16384" unless="NDKV28+" />
+
+    <!-- Extra 16KB alignment workaround for NDK r22 and below -->
+    <flag value="-Wl,-z,common-page-size=16384" unless="NDKV23+" />
+  </section>
 
   <flag value="-stdlib=libc++" unless="NDKV20+" />
   <flag value ="-static-libstdc++" />
-  <flag value ="-Wl,--allow-multiple-definition"/>
   <!-- This shows the android link line, which may be so long that it breaks the tool
      https://github.com/HaxeFoundation/hxcpp/pull/1091
      <flag value ="-v" />
