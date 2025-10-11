@@ -62,6 +62,7 @@
 
   <!-- Options -->
   <cppflag value="-std=c++17" if="HXCPP_CPP17" />
+  <cppflag value="-std=c++20" if="HXCPP_CPP20" />
   <flag value="-flto" if="HXCPP_OPTIMIZE_LINK" unless="debug"/>
   <flag value="-fvisibility=hidden"/>
   <flag value="-ffunction-sections"/>
