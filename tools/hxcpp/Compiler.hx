@@ -311,7 +311,7 @@ class Compiler
 
    static public var printMutex = new Mutex();
 
-   public function compile(inFile:File,inTid:Int,headerFunc:Void->Void,pchTimeStamp:Null<Float>,inProgess:Null<Progress>)
+   public function compile(inFile:File,inTid:Int,headerFunc:Void->Void,pchTimeStamp:Null<Float>,inProgress:Null<Progress>)
    {
       var obj_name = getObjName(inFile);
       var args = getArgs(inFile);
@@ -392,34 +392,37 @@ class Compiler
          if (delayedFilename!=null)
            args.push(delayedFilename);
 
-         if (!Log.verbose)
+         if (!Log.verbose && (inTid >= 0 && BuildTool.threadExitCode == 0))
          {
-            var tagInfo = inFile.mTags==null ? "" : " " + inFile.mTags.split(",");
+            printMutex.acquire();
 
+            var tagInfo = inFile.mTags == null ? "" : "\x1b[3m" + inFile.mTags.split(",") + "\x1b[0m";
             var fileName = inFile.mName;
-            var split = fileName.split ("/");
+            var split = fileName.split("/");
+
             if (split.length > 1)
             {
-               fileName = " \x1b[2m-\x1b[0m \x1b[33m" + split.slice(0, split.length - 1).join("/") + "/\x1b[33;1m" + split[split.length - 1] + "\x1b[0m";
+               fileName = split.slice(0, split.length - 1).join("/") + "/";
+               fileName = "\x1b[33m" + fileName + "\x1b[33;1m" + split[split.length - 1] + "\x1b[0m";
             }
             else
             {
-               fileName = " \x1b[2m-\x1b[0m \x1b[33;1m" + fileName + "\x1b[0m";
+               fileName = "\x1b[33;1m" + fileName + "\x1b[0m";
             }
-            fileName += " \x1b[3m" + tagInfo + "\x1b[0m";
 
-            printMutex.acquire();
+            var output = "";
 
-            if (inProgess != null)
+            if (inProgress != null)
             {
-               inProgess.progress(1);
-               fileName = inProgess.getProgress() + fileName;
-            }
+                inProgress.current++;
 
-            if((inTid >= 0 && BuildTool.threadExitCode == 0) || inTid < 0)
-            {
-               Log.info(fileName);
+                output = ['-', inProgress.getFormattedProgress(), fileName, tagInfo].join(" ");
             }
+            else
+               output = ['-', fileName, tagInfo].join(" ");
+
+            Log.info(output);
+
             printMutex.release();
          }
 

@@ -45,7 +45,7 @@ typedef Linkers = Hash<Linker>;
 
 class BuildTool
 {
-   public inline static var SupportedVersion = 430;
+   public inline static var SupportedVersion = 500;
 
    var mDefines:Hash<String>;
    var mCurrentIncludeFile:String;
@@ -340,30 +340,32 @@ class BuildTool
 
    public static function getThreadCount() : Int
    {
-      if (instance==null)
-         return sCompileThreadCount;
-      var defs = instance.mDefines;
-      if (sAllowNumProcs)
+      if (instance!=null)
       {
-         var thread_var = defs.exists("HXCPP_COMPILE_THREADS") ?
-            defs.get("HXCPP_COMPILE_THREADS") : Sys.getEnv("HXCPP_COMPILE_THREADS");
+         var defs = instance.mDefines;
+         if (sAllowNumProcs)
+         {
+            var thread_var = defs.exists("HXCPP_COMPILE_THREADS") ?
+               defs.get("HXCPP_COMPILE_THREADS") : Sys.getEnv("HXCPP_COMPILE_THREADS");
 
-         if (thread_var == null)
-         {
-            sCompileThreadCount = getNumberOfProcesses();
+            if (thread_var == null)
+            {
+               sCompileThreadCount = getNumberOfProcesses();
+            }
+            else
+            {
+               sCompileThreadCount = (Std.parseInt(thread_var)<2) ? 1 : Std.parseInt(thread_var);
+            }
          }
-         else
-         {
-            sCompileThreadCount = (Std.parseInt(thread_var)<2) ? 1 : Std.parseInt(thread_var);
-         }
-         if (sCompileThreadCount!=sReportedThreads)
-         {
-            sReportedThreads = sCompileThreadCount;
-            Log.v("\x1b[33;1mUsing compile threads: " + sCompileThreadCount + "\x1b[0m");
-         }
+         if (sCompileThreadCount>1 && sThreadPool==null)
+            sThreadPool = new ThreadPool(sCompileThreadCount);
       }
-      if (sCompileThreadCount>1 && sThreadPool==null)
-         sThreadPool = new ThreadPool(sCompileThreadCount);
+
+      if (sCompileThreadCount!=sReportedThreads)
+      {
+         sReportedThreads = sCompileThreadCount;
+         Log.setup('${Log.YELLOW}Using compile threads: $sCompileThreadCount${Log.NORMAL}' );
+      }
 
       return sCompileThreadCount;
    }
@@ -1268,7 +1270,7 @@ class BuildTool
                case "ext" : target.setExt( (substitute(el.att.value)) );
                case "builddir" : target.mBuildDir = substitute(el.att.name);
                case "libpath" : target.mLibPaths.push( substitute(el.att.name) );
-               case "fullouput" : target.mFullOutputName = substitute(el.att.name);
+               case "fulloutput" : target.mFullOutputName = substitute(el.att.name);
                case "fullunstripped" : target.mFullUnstrippedName = substitute(el.att.name);
                case "files" :
                   var id = el.att.id;
@@ -1546,9 +1548,13 @@ class BuildTool
       }
 
 
-      if (defines.exists("HXCPP_NO_COLOUR") || defines.exists("HXCPP_NO_COLOR"))
+      if (Sys.getEnv("HXCPP_COLOUR") != null || Sys.getEnv("HXCPP_COLOR") != null)
+         Log.colorSupported = !(defines.exists("HXCPP_NO_COLOUR") || defines.exists("HXCPP_NO_COLOR"));
+      else if (defines.exists("HXCPP_NO_COLOUR") || defines.exists("HXCPP_NO_COLOR"))
          Log.colorSupported = false;
+
       Log.verbose = defines.exists("HXCPP_VERBOSE");
+      Log.showSetup = defines.exists("HXCPP_LOG_SETUP");
       exitOnThreadError = defines.exists("HXCPP_EXIT_ON_ERROR");
 
 
@@ -2059,6 +2065,7 @@ class BuildTool
          if(defines.exists("windows"))
          {
             defines.set("toolchain","mingw");
+            defines.set("mingw", "mingw");
             defines.set("xcompile","1");
             defines.set("BINDIR", arm64 ? "WindowsArm64" : m64 ? "Windows64":"Windows");
          }
@@ -2206,7 +2213,13 @@ class BuildTool
                   var ver = extract_version.matched(1);
                   var split_best = best.split(".");
                   var split_ver = ver.split(".");
-                  if (Std.parseFloat(split_ver[0]) > Std.parseFloat(split_best[0]) || Std.parseFloat(split_ver[1]) > Std.parseFloat(split_best[1]))
+                  var major_ver = Std.parseFloat(split_ver[0]);
+                  var minor_ver = Std.parseFloat(split_ver[1]);
+                  var major_best = Std.parseFloat(split_best[0]);
+                  var minor_best = Std.parseFloat(split_best[1]);
+                  if (major_ver == major_best && Math.isNaN(minor_best))
+                     best = ver;
+                  else if (major_ver > major_best || minor_ver > minor_best)
                      best = ver;
                }
             }
@@ -2366,7 +2379,7 @@ class BuildTool
    public function checkToolVersion(inVersion:String)
    {
       var ver = Std.parseInt(inVersion);
-      if (ver>6)
+      if (ver>7)
          Log.error("Your version of hxcpp.n is out-of-date.  Please update by compiling 'haxe compile.hxml' in hxcpp/tools/hxcpp.");
    }
 

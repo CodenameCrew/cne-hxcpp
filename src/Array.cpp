@@ -78,49 +78,50 @@ void ArrayBase::Realloc(int inSize) const
    if (!pushCase)
    {
       reserve(inSize);
-      return;
    }
-
-   int newAlloc = inSize;
-   unsigned int elemSize = GetElementSize();
-   unsigned int minBytes = inSize*elemSize + 8;
-   unsigned int roundup = 64;
-   while(roundup<minBytes)
-      roundup<<=1;
-
-   if (roundup>64)
+   else if (pushCase)
    {
-      int half = 3*(roundup>>2);
-      if (minBytes<half)
-         roundup = half;
-   }
-   unsigned int bytes = roundup-8;
+      int newAlloc = inSize;
+      unsigned int elemSize = GetElementSize();
+      unsigned int minBytes = inSize*elemSize + 8;
+      unsigned int roundup = 64;
+      while(roundup<minBytes)
+         roundup<<=1;
 
-   if (mBase)
-   {
-      if (mAlloc<0) // unmanaged memory
+      if (roundup>64)
       {
-         char *base=(char *)hx::InternalNew(bytes,false);
-         memcpy(base,mBase,length*elemSize);
-         mBase = base;
+         int half = 3*(roundup>>2);
+         if (minBytes<half)
+            roundup = half;
       }
-      else // Managed memory
-      {
-         mBase = (char *)hx::InternalRealloc(length*elemSize,mBase, bytes, true);
-         // int o = bytes; // is this used?
-         bytes = hx::ObjectSizeSafe(mBase);
-      }
-   }
-   else
-   {
-      mBase = (char *)hx::InternalNew(bytes,false);
-      #ifdef HXCPP_TELEMETRY
-      __hxt_new_array(mBase, bytes);
-      #endif
-   }
+      unsigned int bytes = roundup-8;
 
-   mAlloc = bytes/elemSize;
-   HX_OBJ_WB_GET(const_cast<ArrayBase *>(this),mBase);
+      if (mBase)
+      {
+         bool wasUnamanaged = mAlloc<0;
+         if (wasUnamanaged)
+         {
+            char *base=(char *)hx::InternalNew(bytes,false);
+            memcpy(base,mBase,length*elemSize);
+            mBase = base;
+         }
+         else
+         {
+            mBase = (char *)hx::InternalRealloc(length*elemSize,mBase, bytes, true);
+            bytes = hx::ObjectSizeSafe(mBase);
+         }
+      }
+      else
+      {
+         mBase = (char *)hx::InternalNew(bytes,false);
+         #ifdef HXCPP_TELEMETRY
+         __hxt_new_array(mBase, bytes);
+         #endif
+      }
+
+      mAlloc = bytes/elemSize;
+      HX_OBJ_WB_GET(const_cast<ArrayBase *>(this),mBase);
+   }
 }
 
 // Set numeric values to 0, pointers to null, bools to false
@@ -367,7 +368,7 @@ String ArrayBase::joinArray(Array_obj<String> *inArray, String inSeparator)
       {
          len += strI.length;
          #ifdef HX_SMART_STRINGS
-         if (!isWChar && strI.isUTF16Encoded())
+         if (strI.isUTF16Encoded())
             isWChar = true;
          #endif
       }
@@ -389,30 +390,30 @@ String ArrayBase::joinArray(Array_obj<String> *inArray, String inSeparator)
          String strI = inArray->__unsafe_get(i);
          if (!strI.raw_ptr())
          {
-            memcpy(buf+pos,u"null",4 * sizeof(char16_t));
+            memcpy(buf+pos,u"null",8);
             pos+=4;
          }
-         else if(strI.length > 0)
+         else if(strI.length==0)
          {
-            if (strI.isUTF16Encoded())
-            {
-               memcpy(buf+pos,strI.raw_wptr(),strI.length*sizeof(char16_t));
-               pos += strI.length;
-            }
-            else
-            {
-               // cant use memcpy since its expecting char16_t
-               const char *ptr = strI.raw_ptr();
-               for(int c=0;c<strI.length;c++)
-                  buf[pos++] = ptr[c];
-            }
+            // ignore
+         }
+         else if (strI.isUTF16Encoded())
+         {
+            memcpy(buf+pos,strI.raw_wptr(),strI.length*sizeof(char16_t));
+            pos += strI.length;
+         }
+         else
+         {
+            const char *ptr = strI.raw_ptr();
+            for(int c=0;c<strI.length;c++)
+               buf[pos++] = ptr[c];
          }
 
          if (separated && (i+1<length) )
          {
             if (sepIsWide)
             {
-               memcpy(buf+pos,inSeparator.raw_wptr(),inSeparator.length*sizeof(char16_t));
+               memcpy(buf+pos,inSeparator.raw_ptr(),inSeparator.length*sizeof(char16_t));
                pos += inSeparator.length;
             }
             else
@@ -425,7 +426,8 @@ String ArrayBase::joinArray(Array_obj<String> *inArray, String inSeparator)
       }
       buf[len] = '\0';
 
-      return String(buf, len);
+      String result(buf,len);
+      return result;
    }
    #endif
    {
@@ -438,7 +440,7 @@ String ArrayBase::joinArray(Array_obj<String> *inArray, String inSeparator)
          String strI = inArray->__unsafe_get(i);
          if (!strI.raw_ptr())
          {
-            memcpy(buf+pos,"null",4*sizeof(char));
+            memcpy(buf+pos,"null",4);
             pos+=4;
          }
          else
