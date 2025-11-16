@@ -106,7 +106,7 @@ static int sgCheckInternalOffsetRows = 0;
 int gInAlloc = false;
 
 // This is recalculated from the other parameters
-static size_t sWorkingMemorySize = 50*1024*1024;
+static size_t sWorkingMemorySize = 256*1024;
 
 #ifdef HXCPP_GC_MOVING
 // Just not sure what this shold be
