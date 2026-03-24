@@ -707,7 +707,7 @@ static void make_array_result_inplace(Array<Dynamic> a, fd_set *tmp)
 static struct timeval *init_timeval( double f, struct timeval *t ) {
    if (f<0)
       return 0;
-   t->tv_usec = (f - (int)f ) * 1000000;
+   t->tv_usec = (int)(  (f - (int)f ) * 1000000 );
    t->tv_sec = (int)f;
    return t;
 }
