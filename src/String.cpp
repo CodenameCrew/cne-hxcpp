@@ -1710,6 +1710,60 @@ int String::compare(const ::String &inRHS) const
 }
 #endif
 
+bool String::__StartsWith(const String &inValue) const
+{
+   if(!__s)
+      return false;
+   if(!inValue.__s)
+      return true; // should return false, but original code returns true
+   int l = inValue.length;
+
+   if (l > length)
+      return false;
+   if (l == 0)
+      return true;
+
+   bool s016 = isUTF16Encoded();
+   bool s116 = inValue.isUTF16Encoded();
+   if (s016 && s116)
+   {
+      return memcmp(__w, inValue.__w, l * sizeof(char16_t)) == 0;
+   }
+   else if (s016 || s116)
+   {
+      return s016 ? StrMatch(__w, inValue.__s, l) :
+                    StrMatch(inValue.__w, __s, l);
+   }
+   return memcmp(__s, inValue.__s, l) == 0;
+}
+
+bool String::__EndsWith(const String &inValue) const
+{
+   if(!__s)
+      return false;
+   if(!inValue.__s)
+      return true; // should return false, but original code returns true
+   int l = inValue.length;
+
+   if (l > length)
+      return false;
+   if (l == 0)
+      return true;
+
+   bool s016 = isUTF16Encoded();
+   bool s116 = inValue.isUTF16Encoded();
+   if (s016 && s116)
+   {
+      return memcmp(__w + (length - l), inValue.__w, l * sizeof(char16_t)) == 0;
+   }
+   else if (s016 || s116)
+   {
+      return s016 ? StrMatch(__w + (length - l), inValue.__s, l) :
+                  StrMatch(inValue.__w, __s + (length - l), l);
+   }
+   return memcmp(__s + (length - l), inValue.__s, l) == 0;
+}
+
 
 namespace hx
 {
