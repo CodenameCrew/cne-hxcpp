@@ -108,13 +108,13 @@ static int sgCheckInternalOffsetRows = 0;
 int gInAlloc = false;
 
 // This is recalculated from the other parameters
-static size_t sWorkingMemorySize          = 10*1024*1024;
+static size_t sWorkingMemorySize = 256*1024;
 
 #ifdef HXCPP_GC_MOVING
 // Just not sure what this shold be
-static size_t sgMaximumFreeSpace  = 1024*1024*1024;
+static size_t sgMaximumFreeSpace = 512*1024*1024;
 #else
-static size_t sgMaximumFreeSpace  = 1024*1024*1024;
+static size_t sgMaximumFreeSpace = 512*1024*1024;
 #endif
 
 
@@ -701,7 +701,7 @@ struct HoleRange
 hx::QuickVec<struct BlockDataInfo *> *gBlockInfo = 0;
 static int gBlockInfoEmptySlots = 0;
 
-#define FRAG_THRESH 14
+#define FRAG_THRESH 20
 
 #define ZEROED_NOT    0
 #define ZEROED_THREAD 1
@@ -3097,11 +3097,11 @@ void VerifyStackRead(int *inBottom, int *inTop)
 
 // TODO - work out best size based on cache size?
 #ifdef HXCPP_GC_BIG_BLOCKS
-static int sMinZeroQueueSize = 4;
-static int sMaxZeroQueueSize = 16;
+static int sMinZeroQueueSize = 4*2;
+static int sMaxZeroQueueSize = 16*2;
 #else
-static int sMinZeroQueueSize = 8;
-static int sMaxZeroQueueSize = 32;
+static int sMinZeroQueueSize = 8*2;
+static int sMaxZeroQueueSize = 32*2;
 #endif
 
 #define BLOCK_OFSIZE_COUNT 12
@@ -3219,7 +3219,8 @@ public:
 
       //Should we force a collect ? - the 'large' data are not considered when allocating objects
       // from the blocks, and can 'pile up' between smalll object allocations
-      if ((inSize+mLargeAllocated > mLargeAllocForceRefresh) && sgInternalEnable)
+      size_t newThreshold = mLargeAllocForceRefresh * 1.5f;
+      if ((inSize+mLargeAllocated > newThreshold) && sgInternalEnable)
       {
          #ifdef SHOW_MEM_EVENTS
          //GCLOG("Large alloc causing collection");
@@ -5167,11 +5168,11 @@ public:
          }
 
 
-         bool isFragged = stats.fragScore > mAllBlocks.size()*FRAG_THRESH;
+         bool isFragged = stats.fragScore > mAllBlocks.size()*FRAG_THRESH*1.5;
          if (doRelease || isFragged || hx::gAlwaysMove)
          {
-            if (isFragged && sgTimeToNextTableUpdate>3)
-               sgTimeToNextTableUpdate = 3;
+            if (isFragged && sgTimeToNextTableUpdate>1)
+               sgTimeToNextTableUpdate = 1;
             calcMoveOrder( );
 
             // Borrow some blocks to ensuure space to defrag into
@@ -5287,7 +5288,7 @@ public:
       double filled_ratio = (double)mRowsInUse/(double)(mAllBlocksCount*IMMIX_USEFUL_LINES);
       double after_gen = filled_ratio + (1.0-filled_ratio)*mGenerationalRetainEstimate;
 
-      if (after_gen<0.75)
+      if (after_gen<0.85)
       {
          sGcMode = gcmGenerational;
       }
@@ -5296,6 +5297,7 @@ public:
          sGcMode = gcmFull;
          // What was I thinking here?  This breaks #851
          //gByteMarkID |= 0x30;
+         sgTimeToNextTableUpdate = 10;
       }
 
       #ifdef SHOW_MEM_EVENTS
