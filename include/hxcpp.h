@@ -308,6 +308,7 @@ typedef ::cpp::Variant Val;
 
 #ifdef HXCPP_GC_GENERATIONAL
   #define HXCPP_GC_NURSERY
+  #define HXCPP_GC_FORCED_FULL
 #endif
 
 
