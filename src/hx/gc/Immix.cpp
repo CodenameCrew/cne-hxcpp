@@ -2522,7 +2522,7 @@ void FindZombies(MarkContext &inContext)
 
 bool IsWeakRefValid(const HX_CHAR *inPtr)
 {
-   unsigned char mark = ((unsigned char *)inPtr)[HX_ENDIAN_MARK_ID_BYTE];
+   unsigned char mark = ((unsigned char *)inPtr)[HX_ENDIAN_MARK_ID_BYTE] & ~HX_GC_REMEMBERED;
 
     // Special case of member closure - check if the 'this' pointer is still alive
    return  mark==gByteMarkID;
@@ -2530,7 +2530,7 @@ bool IsWeakRefValid(const HX_CHAR *inPtr)
 
 bool IsWeakRefValid(hx::Object *inPtr)
 {
-   unsigned char mark = ((unsigned char *)inPtr)[HX_ENDIAN_MARK_ID_BYTE];
+   unsigned char mark = ((unsigned char *)inPtr)[HX_ENDIAN_MARK_ID_BYTE] & ~HX_GC_REMEMBERED;
 
     // Special case of member closure - check if the 'this' pointer is still alive
     bool isCurrent = mark==gByteMarkID;
@@ -2539,7 +2539,7 @@ bool IsWeakRefValid(hx::Object *inPtr)
         hx::Object *thiz = (hx::Object *)inPtr->__GetHandle();
         if (thiz)
         {
-            mark = ((unsigned char *)thiz)[HX_ENDIAN_MARK_ID_BYTE];
+            mark = ((unsigned char *)thiz)[HX_ENDIAN_MARK_ID_BYTE] & ~HX_GC_REMEMBERED;
             if (mark==gByteMarkID)
             {
                // The object is still alive, so mark the closure and continue
@@ -5290,7 +5290,7 @@ public:
 
       if (after_gen<0.85)
       {
-         sGcMode = gcmGenerational;
+         sGcMode = gcmFull;
       }
       else
       {

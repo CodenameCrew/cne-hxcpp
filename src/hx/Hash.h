@@ -642,7 +642,7 @@ struct Hash : public HashBase< typename ELEMENT::Key >
       el->next = bucket[hash&mask];
       bucket[hash&mask] = el;
 
-      #ifdef HXCPP_GC_GENERATIONAL
+      #if defined(HXCPP_GC_GENERATIONAL) && !defined(HXCPP_GC_FORCED_FULL)
       unsigned char &mark =  ((unsigned char *)(this))[ HX_ENDIAN_MARK_ID_BYTE];
       if (mark == hx::gByteMarkID)
       {
