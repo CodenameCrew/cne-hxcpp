@@ -112,9 +112,9 @@ static size_t sWorkingMemorySize = 256*1024;
 
 #ifdef HXCPP_GC_MOVING
 // Just not sure what this shold be
-static size_t sgMaximumFreeSpace = 512*1024*1024;
+static size_t sgMaximumFreeSpace = 1024*1024*1024;
 #else
-static size_t sgMaximumFreeSpace = 512*1024*1024;
+static size_t sgMaximumFreeSpace = 1024 * 1024 * 1024;
 #endif
 
 
@@ -464,6 +464,9 @@ extern void scriptMarkStack(hx::MarkContext *);
 #ifdef HXCPP_GC_BIG_BLOCKS
    #define IMMIX_BLOCK_BITS      16
    typedef unsigned int BlockIdType;
+#elif defined(HXCPP_GC_BLOCK_16K)
+   #define IMMIX_BLOCK_BITS      14
+   typedef unsigned int BlockIdType;
 #else
    #define IMMIX_BLOCK_BITS      15
    typedef unsigned short BlockIdType;
@@ -476,7 +479,11 @@ extern void scriptMarkStack(hx::MarkContext *);
 #define IMMIX_LINES             (1<<IMMIX_LINE_COUNT_BITS)
 
 
-#define IMMIX_HEADER_LINES      (IMMIX_LINES>>IMMIX_LINE_BITS)
+#if defined(HXCPP_GC_BLOCK_16K)
+   #define IMMIX_HEADER_LINES    4
+#else
+   #define IMMIX_HEADER_LINES    (IMMIX_LINES>>IMMIX_LINE_BITS)
+#endif
 #define IMMIX_USEFUL_LINES      (IMMIX_LINES - IMMIX_HEADER_LINES)
 
 #define IMMIX_MAX_ALLOC_GROUPS_SIZE  (1<<IMMIX_BLOCK_GROUP_BITS)
@@ -701,7 +708,7 @@ struct HoleRange
 hx::QuickVec<struct BlockDataInfo *> *gBlockInfo = 0;
 static int gBlockInfoEmptySlots = 0;
 
-#define FRAG_THRESH 20
+#define FRAG_THRESH 14
 
 #define ZEROED_NOT    0
 #define ZEROED_THREAD 1
@@ -3463,7 +3470,7 @@ public:
       }
       #endif
 
-      #ifndef HXCPP_GC_BIG_BLOCKS
+      #if !defined(HXCPP_GC_BIG_BLOCKS) && !defined(HXCPP_GC_BLOCK_16K)
       // Currently, we only have 2 bytes for a block header
       if (mAllBlocks.size()+newBlockCount >= 0xfffe )
       {
@@ -5168,7 +5175,7 @@ public:
          }
 
 
-         bool isFragged = stats.fragScore > mAllBlocks.size()*FRAG_THRESH*1.5;
+         bool isFragged = stats.fragScore > mAllBlocks.size()*FRAG_THRESH;
          if (doRelease || isFragged || hx::gAlwaysMove)
          {
             if (isFragged && sgTimeToNextTableUpdate>1)
